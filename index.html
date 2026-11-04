@@ -289,7 +289,7 @@
           <span>A idade é calculada na data de início do evento (30/11/2026). Ao preencher a data de nascimento de cada estudante, o formulário mostra o que a autorização dele precisa ter. Caso raro: se o estudante morar no interior, mas estudar em escola de URE da Grande SP, providencie a firma reconhecida mesmo assim.</span>
           <div id="tipoUre" style="margin-top:10px"></div>
         </div>
-         <a class="modelo" id="linkModelo" href="kit-autorizacao.pdf" download="Kit_Autorizacao_Evento_Campeoes_OMASP_2026.pdf">
+        <a class="modelo" id="linkModelo" href="kit-autorizacao.pdf" download="Kit_Autorizacao_Evento_Campeoes_OMASP_2026.pdf">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>
           Baixar kit de autorização (PDF)
         </a>
@@ -300,7 +300,7 @@
       <!-- 3 -->
       <section class="secao">
         <h2><span class="n">3</span>PECs e acompanhantes</h2>
-        <p class="desc">Cada URE pode levar <b>1 acompanhante para cada <span class="nAc">5</span> estudantes</b> que vão participar: <span id="exAc">de 1 a 5 estudantes, 1 acompanhante; de 6 a 10, 2; de 11 a 15, 3</span>; e assim por diante. As vagas são liberadas conforme você marca estudantes como “Vai participar”. Se você também vai, inclua-se aqui. Os nomes cadastrados aqui devem ser os mesmos do item 2.3 das autorizações.</p>
+        <p class="desc">Cada URE pode levar <b>1 acompanhante a cada grupo completo de <span class="nAc">4</span> estudantes</b> que vão participar, com no mínimo 1: <span id="exAc">de 1 a 7 estudantes, 1 acompanhante; de 8 a 11, 2; de 12 a 15, 3</span>; e assim por diante. As vagas são liberadas conforme você marca estudantes como “Vai participar”. Se você também vai, inclua-se aqui. Os nomes cadastrados aqui devem ser os mesmos do item 2.3 das autorizações.</p>
         <div class="vagas zero" id="vagas" aria-live="polite"></div>
         <div id="listaAc"></div>
         <button type="button" class="add" id="addAc">
@@ -500,7 +500,7 @@
     ['Condição de saúde com cuidado contínuo', 'ex.: epilepsia, asma, medicação diária'],
     ['Outra', 'descreva abaixo'],
   ];
-  let POR_ACOMP = 5;
+  let POR_ACOMP = 4;
   let DATA_EVENTO = '2026-11-30';
   const normTxt = t => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/[^A-Z0-9]/g, '');
   // UREs da Capital e da Região Metropolitana (a lista oficial vem do script; esta é a reserva)
@@ -564,7 +564,7 @@
   function aplicarRegraAc(){
     document.querySelectorAll('.nAc').forEach(x => { x.textContent = POR_ACOMP; });
     const n = POR_ACOMP;
-    $('exAc').textContent = `de 1 a ${n} estudantes, 1 acompanhante; de ${n + 1} a ${2 * n}, 2; de ${2 * n + 1} a ${3 * n}, 3`;
+    $('exAc').textContent = `de 1 a ${2 * n - 1} estudantes, 1 acompanhante; de ${2 * n} a ${3 * n - 1}, 2; de ${3 * n} a ${4 * n - 1}, 3`;
   }
 
   /* ================= URE → estudantes ================= */
@@ -674,7 +674,8 @@
     const el = novoAcompanhante(); el.querySelector('.f-nome').focus();
   });
   function participantes(){ return [...estEl.values()].filter(c => c.dataset.participa === 'sim').length; }
-  function limiteAc(){ return Math.ceil(participantes() / POR_ACOMP); }
+  // 1 acompanhante a cada grupo COMPLETO de POR_ACOMP estudantes (mínimo 1 se houver participante)
+  function limiteAc(){ const p = participantes(); return p ? Math.max(1, Math.floor(p / POR_ACOMP)) : 0; }
 
   function atualizarVagas(){
     const p = participantes(), lim = limiteAc(), n = $('listaAc').children.length;
@@ -687,7 +688,7 @@
     btn.lastChild.textContent = n >= lim ? ' Todas as vagas de acompanhante preenchidas' : ` Adicionar acompanhante (${n} de ${lim})`;
     v.className = 'vagas' + (lim === 0 ? ' zero' : n > lim ? ' excesso' : '');
     const pips = Array.from({ length: Math.max(lim, n) }, (_, i) => `<i class="${i < Math.min(n, lim) ? 'on' : i >= lim ? 'x' : ''}"></i>`).join('');
-    const falta = lim * POR_ACOMP + 1 - p; // estudantes para liberar a próxima vaga
+    const falta = (lim + 1) * POR_ACOMP - p; // estudantes para liberar a próxima vaga
     let txt;
     if (lim === 0) txt = 'Marque ao menos um estudante como <b>“Vai participar”</b> para liberar o cadastro de acompanhantes.';
     else if (n > lim) txt = `<b>${n} acompanhantes para ${lim} vaga${lim === 1 ? '' : 's'}.</b> Remova ${n - lim} ou confirme mais estudantes.`;
@@ -1052,7 +1053,7 @@
     };
     let n = 0;
     return {
-      init: () => espera({ ures: Object.keys(est), linkModelo:'https://example.com/modelo.pdf', maxMb:8, aberto:true, alunosPorAcompanhante:5, dataEvento:'2026-11-30' }),
+      init: () => espera({ ures: Object.keys(est), linkModelo:'https://example.com/modelo.pdf', maxMb:8, aberto:true, alunosPorAcompanhante:4, dataEvento:'2026-11-30' }),
       estudantes: ure => espera({ estudantes: est[ure] || [], envioAnterior: ure === 'Campinas Leste' ? { data:'25/10 às 14:32', protocolo:'OMASP-1025-K7QF' } : null }),
       upload: () => espera({ id:'f' + (++n), url:'https://drive.google.com/x' }, 250),
       enviar: d => espera({ protocolo:'OMASP-1027-X4PT', participantes: d.estudantes.filter(e => e.participa).length, acompanhantes: d.acompanhantes.length, substituiu:false }, 700),
