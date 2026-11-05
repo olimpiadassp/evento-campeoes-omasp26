@@ -164,6 +164,7 @@
   .req.simples{background:#e8f1fb; color:#163a7a}
   .req.dispensada{background:var(--ok-bg); color:var(--ok)}
   .confs .check{margin:0 0 10px}
+  .check.apoio{margin:12px 0 4px; padding:12px 14px; border-radius:12px; background:#e8f1fb; color:#163a7a; cursor:default}
   .tag-mun{display:inline-block; margin-top:6px; font-size:12px; font-weight:700; padding:2px 8px; border-radius:99px; background:#f1efe9; color:var(--muted)}
   .tag-mun.rm{background:#e8f1fb; color:var(--azul)}
   .add{display:flex; align-items:center; justify-content:center; gap:8px; width:100%; height:52px; border:1.5px dashed var(--azul-2); border-radius:14px; background:#fff; color:var(--azul); font:inherit; font-weight:700; cursor:pointer; margin-bottom:12px}
@@ -300,7 +301,7 @@
       <!-- 3 -->
       <section class="secao">
         <h2><span class="n">3</span>PECs e acompanhantes</h2>
-        <p class="desc">A quantidade de acompanhantes de cada URE segue a distribuição definida na <a href="https://seesp-my.sharepoint.com/:x:/g/personal/rubia_prado_educacao_sp_gov_br/cQoohqC4A9lhSYAVtF-ydvT5EgUCvSdMEpEslMzR7lWfKLU-cQ" target="_blank" rel="noopener">planilha de distribuição de acompanhantes</a>. As vagas são liberadas conforme você marca estudantes como “Vai participar”. Se você também vai, inclua-se aqui. Os nomes cadastrados aqui devem ser os mesmos do item 2.3 das autorizações.<span id="exAc" hidden></span></p>
+        <p class="desc">A quantidade de acompanhantes de cada URE segue a distribuição definida na <a href="https://seesp-my.sharepoint.com/:x:/g/personal/rubia_prado_educacao_sp_gov_br/cQoohqC4A9lhSYAVtF-ydvT5EgUCvSdMEpEslMzR7lWfKLU-cQ" target="_blank" rel="noopener">planilha de distribuição de acompanhantes</a>. As vagas são liberadas conforme você marca estudantes como “Vai participar”. Se você também vai, inclua-se aqui. Os nomes cadastrados aqui devem ser os mesmos do item 2.3 das autorizações. <b>Estudante que precisa de intérprete de Libras</b> libera 1 vaga a mais, exclusiva para o intérprete: marque “Usuário(a) de Libras” no cartão do estudante e cadastre o intérprete com a função “Intérprete de Libras”.<span id="exAc" hidden></span></p>
         <div class="vagas zero" id="vagas" aria-live="polite"></div>
         <div id="listaAc"></div>
         <button type="button" class="add" id="addAc">
@@ -410,6 +411,7 @@
           <div class="opcoes" data-lista="def"></div>
           <input type="text" class="f-defq outro" placeholder="Descreva a outra deficiência ou necessidade" hidden>
           <input type="text" class="f-defdet outro" placeholder="Detalhes do atendimento necessário (opcional)">
+          <div class="check apoio" hidden><span><b>Intérprete de Libras:</b> este estudante libera 1 vaga extra de acompanhante, exclusiva para o intérprete. Cadastre-o na seção 3 com a função “Intérprete de Libras”.</span></div>
         </div>
         <div class="msg-erro">Responda e, se sim, marque ao menos uma opção.</div>
       </div>
@@ -438,7 +440,7 @@
       <div class="grade">
         <div class="campo" data-campo="nome"><label>Nome completo</label><input type="text" class="f-nome" placeholder="Nome e sobrenome"><div class="msg-erro">Informe o nome completo.</div></div>
         <div class="campo" data-campo="funcao"><label>Função</label>
-          <select class="f-funcao"><option value="">Selecione</option><option>PEC</option><option>Supervisor(a) de Ensino</option><option>Professor(a)</option><option>Diretor(a) / Vice-diretor(a)</option><option>Coordenador(a) pedagógico(a)</option><option>Outro</option></select>
+          <select class="f-funcao"><option value="">Selecione</option><option>PEC</option><option>Intérprete de Libras</option><option>Supervisor(a) de Ensino</option><option>Professor(a)</option><option>Diretor(a) / Vice-diretor(a)</option><option>Coordenador(a) pedagógico(a)</option><option>Outro</option></select>
           <div class="msg-erro">Selecione a função.</div></div>
       </div>
       <div class="grade3">
@@ -631,6 +633,10 @@
     });
     // a regra da autorização depende da idade no evento e do município
     ['input','change'].forEach(ev => el.querySelector('.f-nasc').addEventListener(ev, () => mostrarRegra(el, a)));
+    const avisoLibras = () => { el.querySelector('.check.apoio').hidden = !precisaLibras(el); atualizarResumo(); };
+    el.querySelector('[data-lista="def"]').addEventListener('change', avisoLibras);
+    el.querySelectorAll('.r-def').forEach(x => x.addEventListener('change', avisoLibras));
+    el.querySelectorAll('.seg button').forEach(x => x.addEventListener('click', avisoLibras));
     ligarCampos(el);
     mostrarRegra(el, a);
     estEl.set(a.id, el);
@@ -675,7 +681,12 @@
   });
   function participantes(){ return [...estEl.values()].filter(c => c.dataset.participa === 'sim').length; }
   // 1 acompanhante a cada grupo COMPLETO de POR_ACOMP estudantes (mínimo 1 se houver participante)
-  function limiteAc(){ const p = participantes(); return p ? Math.max(1, Math.floor(p / POR_ACOMP)) : 0; }
+  // estudantes confirmados que precisam de intérprete de Libras (1 vaga extra cada)
+  const LIBRAS = 'Usuário(a) de Libras';
+  function precisaLibras(c){ return c.dataset.participa === 'sim' && radio(c,'r-def') === 'sim' && !!c.querySelector(`[data-lista="def"] input[value="${LIBRAS}"]:checked`); }
+  function vagasApoio(){ return [...estEl.values()].filter(precisaLibras).length; }
+  function limiteBase(){ const p = participantes(); return p ? Math.max(1, Math.floor(p / POR_ACOMP)) : 0; }
+  function limiteAc(){ return limiteBase() + vagasApoio(); }
 
   function atualizarVagas(){
     const p = participantes(), lim = limiteAc(), n = $('listaAc').children.length;
@@ -688,12 +699,14 @@
     btn.lastChild.textContent = n >= lim ? ' Todas as vagas de acompanhante preenchidas' : ` Adicionar acompanhante (${n} de ${lim})`;
     v.className = 'vagas' + (lim === 0 ? ' zero' : n > lim ? ' excesso' : '');
     const pips = Array.from({ length: Math.max(lim, n) }, (_, i) => `<i class="${i < Math.min(n, lim) ? 'on' : i >= lim ? 'x' : ''}"></i>`).join('');
-    const falta = (lim + 1) * POR_ACOMP - p; // estudantes para liberar a próxima vaga
+    const base = limiteBase(), apoio = vagasApoio();
+    const falta = (base + 1) * POR_ACOMP - p; // estudantes para liberar a próxima vaga
     let txt;
     if (lim === 0) txt = 'Marque ao menos um estudante como <b>“Vai participar”</b> para liberar o cadastro de acompanhantes.';
     else if (n > lim) txt = `<b>${n} acompanhantes para ${lim} vaga${lim === 1 ? '' : 's'}.</b> Remova ${n - lim} ou confirme mais estudantes.`;
-    else txt = `<b>${p} estudante${p === 1 ? '' : 's'} confirmado${p === 1 ? '' : 's'}</b> → até ${lim} acompanhante${lim === 1 ? '' : 's'}.` +
-      (estEl.size - p >= falta ? ` Com mais ${falta} estudante${falta === 1 ? '' : 's'} confirmado${falta === 1 ? '' : 's'}, libera a ${lim + 1}ª vaga.` : '');
+    else txt = `<b>${p} estudante${p === 1 ? '' : 's'} confirmado${p === 1 ? '' : 's'}</b> → até ${lim} acompanhante${lim === 1 ? '' : 's'}` +
+      (apoio ? ` (${base} pela distribuição + ${apoio} intérprete${apoio === 1 ? '' : 's'} de Libras)` : '') + '.' +
+      (estEl.size - p >= falta ? ` Com mais ${falta} estudante${falta === 1 ? '' : 's'} confirmado${falta === 1 ? '' : 's'}, libera mais uma vaga.` : '');
     v.innerHTML = `<div class="num"><b>${Math.min(n, 99)}/${lim}</b><small>vagas usadas</small></div><div><span>${txt}</span>${lim ? `<div class="pips">${pips}</div>` : ''}</div>`;
     if (n <= lim) limparErro($('erroAcomp').closest('.campo'));
   }
@@ -875,6 +888,10 @@
     });
     const acs = participantes ? [...$('listaAc').children] : []; // sem participantes, acompanhantes não são exigidos
     if (participantes && !acs.length) erros.push($('erroAcomp').closest('.campo'));
+    const interpretes = acs.filter(a => val(a,'.f-funcao') === 'Intérprete de Libras').length;
+    if (acs.length > limiteBase() && interpretes < Math.min(vagasApoio(), acs.length - limiteBase())) {
+      marcarErro($('erroAcomp').closest('.campo'), 'A vaga extra é exclusiva para intérprete de Libras: cadastre o intérprete com essa função.'); erros.push($('erroAcomp').closest('.campo'));
+    }
     if (acs.length > limiteAc()) { marcarErro($('erroAcomp').closest('.campo'), `São ${acs.length} acompanhantes para ${limiteAc()} vaga(s). Remova ${acs.length - limiteAc()}.`); erros.push($('erroAcomp').closest('.campo')); }
     [...$('listaAc').children].forEach(el => el.classList.remove('invalido'));
     acs.forEach(el => { const e = errosPessoa(el); erros.push(...e); el.classList.toggle('invalido', e.length > 0); if (e.length) { const st = el.querySelector('.status'); st.textContent = 'Faltam dados'; st.className = 'status falta'; } });
